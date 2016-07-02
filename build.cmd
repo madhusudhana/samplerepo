@@ -1,3 +1,3 @@
-echo %JAVA_HOME%
-
 echo "Demo GOCD"
+
+echo "Demo to Vijay"
