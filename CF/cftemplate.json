@@ -1,0 +1,58 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "MyS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "13a7f3a3-4e5c-499c-b62e-c520a5421517"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "WebsiteURL": {
+      "Value": {
+        "Fn::GetAtt": [
+          "MyS3Bucket",
+          "WebsiteURL"
+        ]
+      },
+      "Description": "URL for website hosted on S3"
+    },
+    "S3BucketSecureURL": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Fn::GetAtt": [
+                "MyS3Bucket",
+                "DomainName"
+              ]
+            }
+          ]
+        ]
+      },
+      "Description": "Name of S3 bucket to hold website content"
+    }
+  },
+  "Metadata": {
+    "AWS::CloudFormation::Designer": {
+      "13a7f3a3-4e5c-499c-b62e-c520a5421517": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 60,
+          "y": 90
+        },
+        "z": 1,
+        "embeds": []
+      }
+    }
+  }
+}

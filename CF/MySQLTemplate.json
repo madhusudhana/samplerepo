@@ -1,0 +1,161 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  
+  "Description" : "This Cloud formation template creates an Amazon RDS MYSQL instance for Delivery Tracking Report project",
+  "Parameters": {
+    "env" : {
+      "Description" : "Environment, affects ssh keys and S3 sync",
+      "Type" : "String",
+      "AllowedValues" : [ "prod", "qa", "dev" ],
+      "Default" : "dev"
+    },
+    "application" : {
+      "Description" : "Application - for tagging purposes",
+      "Type" : "String",
+      "Default" : "DeliveryTrackingReport"
+    }, 
+    "ChargeCode" : {
+      "Description" : "Charge code - for billing purposes",
+      "Type" : "String",
+      "Default" : "104018"
+    },
+	 "DTRMySQLDBName": {
+      "Default": "dtrdev",
+      "Description": "DTR database name",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "64",
+      "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+    },
+    "DTRRDSRootUser" : {
+      "Description" : "The database user for root account",
+      "Default" : "DTRADMIN",      
+      "Type" : "String",
+      "MinLength" : "4",
+      "MaxLength" : "128",
+      "AllowedPattern" : "^[a-zA-Z][a-zA-Z0-9_]*$"
+    },    
+    "DTRRDSRootPwd": {
+      "NoEcho": "true",
+      "Description" : "The database admin account password",
+      "Type": "String",
+      "MinLength": "8",
+      "MaxLength": "41",
+      "AllowedPattern" : "^([a-zA-Z0-9!@*#$%]{8,15})$",
+      "ConstraintDescription" : "password can contain any printable ASCII character except @*#$%"
+    },
+    "subnetId1" : {
+      "Description" : "ID of the first subnet for the DB Subnet Group",
+      "Type" : "String",
+      "AllowedPattern" : "^subnet-[0-9a-z]{8}"
+    },
+    "subnetId2" : {
+      "Description" : "ID of the first subnet for the DB Subnet Group",
+      "Type" : "String",
+      "AllowedPattern" : "^subnet-[0-9a-z]{8}"
+    },
+	"DTRMySQLDBAllocatedStorage": {
+      "Default": "5",
+      "Description": "The size of the database (GB)",
+      "Type": "Number",
+      "MinValue": "5",
+      "MaxValue": "1024",
+      "ConstraintDescription": "must be between 5 and 1024 GB."
+    },
+    "InstanceClass" : {
+      "Description" : "RDS instance type",
+      "Type" : "String",
+      "Default" : "db.t2.large",
+      "AllowedValues" : [ "db.t1.micro", "db.m1.small", "db.m1.medium", "db.m1.large", "db.m1.xlarge", "db.m2.xlarge", "db.m2.2xlarge", "db.m2.4xlarge", "db.m3.medium", "db.m3.large", "db.m3.xlarge", "db.m3.2xlarge", "db.m4.large", "db.m4.xlarge", "db.m4.2xlarge", "db.m4.4xlarge", "db.m4.10xlarge", "db.r3.large", "db.r3.xlarge", "db.r3.2xlarge", "db.r3.4xlarge", "db.r3.8xlarge", "db.m2.xlarge", "db.m2.2xlarge", "db.m2.4xlarge", "db.cr1.8xlarge", "db.t2.micro", "db.t2.small", "db.t2.medium", "db.t2.large"],
+      "ConstraintDescription" : "must be a valid RDS instance type."
+    },
+    "RDSSecurityGroup" : {
+      "Description" : "Security Group for MySQL RDS",
+      "Type" : "String",
+      "AllowedPattern" : "^sg-[0-9a-z]{8}"
+    },
+    "hostedZoneName" : {
+      "Description" : "The Route53 hosted zone name for the RDS.Mind the dot at the end ",
+      "Type" : "String",
+      "Default" : "edf.nikecloud.net",
+      "MinLength" : "4",
+      "MaxLength" : "253",
+      "AllowedPattern" : "^[a-zA-Z0-9.-]*"
+    }
+  },
+  "Resources" : {
+    "dnsRoute53Db" : {
+      "Type" : "AWS::Route53::RecordSet",
+      "Properties" : {
+        "HostedZoneName" : { "Fn::Join" : [ "", [ { "Ref" : "hostedZoneName" }, "."  ] ] },
+        "Comment" : "DNS CNAME of the MySQL database Endpoint",
+        "Name" : { "Fn::Join" : [ "", [ { "Ref" : "env" }, "-dtr-db.", { "Ref" : "hostedZoneName" }, "." ] ] },
+        "Type" : "CNAME",
+        "TTL" : "300",
+        "ResourceRecords" : [ { "Fn::GetAtt" : [ "MySQLdb", "Endpoint.Address" ] } ]
+      }
+    },
+    "MySQLdb" : {
+      "Type" : "AWS::RDS::DBInstance",
+      "Properties" : {
+        "AllocatedStorage"		: { "Ref" : "DTRMySQLDBAllocatedStorage" },
+        "AllowMajorVersionUpgrade" 	: "false",
+        "AutoMinorVersionUpgrade" 	: "true",
+        "BackupRetentionPeriod" 	:  "7",
+        "DBInstanceClass"   		: { "Ref" : "InstanceClass" },
+        "DBInstanceIdentifier"  	: { "Ref" : "AWS::StackName" },
+        "DBName"			: { "Ref" : "DTRMySQLDBName"},
+        "DBSubnetGroupName"		: { "Ref" : "dbSubnetGroup" },
+        "Engine"            		: "MySQL",
+        "MasterUsername" 		: { "Ref" : "DTRRDSRootUser" },
+    	"MasterUserPassword" 		: { "Ref" : "DTRRDSRootPwd"  },
+        "MultiAZ"           		: "true",
+        "Port" 				: "3306",
+	"PreferredBackupWindow" 	: "09:40-10:10",
+        "PreferredMaintenanceWindow" 	: "sun:04:28-sun:04:58",        
+        "PubliclyAccessible"    	: "false",
+        "Tags" : [ {
+          "Key" : "env",
+          "Value" : { "Ref" : "env" }
+          }, {		
+          "Key" : "ChargeCode",
+          "Value" : { "Ref" : "ChargeCode" }
+          }, {
+          "Key" : "application",
+          "Value" : { "Ref" : "application" }
+          } ],
+        "VPCSecurityGroups"  		: [ { "Ref" : "RDSSecurityGroup" } ]
+      }
+    },
+    "dbSubnetGroup" : {
+      "Type" : "AWS::RDS::DBSubnetGroup",
+      "Properties" : {
+        "DBSubnetGroupDescription" : {
+          "Fn::Join" : [ "", [ {
+            "Ref" : "AWS::StackName"
+           }, "MySQL DB Subnet Group" ] ]
+        },
+        "SubnetIds" : [ {
+          "Ref" : "subnetId1"
+        }, {
+        "Ref" : "subnetId2"
+         } ]
+      }
+    }
+  },
+  "Outputs" : {
+    "rdsEndpointAddress" : {
+      "Description" : "DTR MySQL database Instance endpoint",
+      "Value" : { "Fn::GetAtt" : [ "MySQLdb", "Endpoint.Address" ] }
+     },
+    "rdsEndpointPort" : {
+      "Description" : "DTR MySQL database port",
+      "Value" : { "Fn::GetAtt" : [ "MySQLdb", "Endpoint.Port" ] }
+     },
+     "rdsEndpointDnsName" : {
+      "Description" : "DNS CNAME of DTR MySQL database endpoint",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "env" }, "-dtr-db.", { "Ref" : "hostedZoneName" } ] ] }
+    }
+  }
+}
