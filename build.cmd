@@ -5,4 +5,4 @@ echo "Demo GOCD"
 
 echo "Demo to Vijay"
 
-aws cloudformation create-stack --stack-name myteststack1 --template-body %FILELOC%
+aws cloudformation list-stacks
