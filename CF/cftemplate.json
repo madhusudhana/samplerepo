@@ -4,7 +4,7 @@
     "MyS3Bucket": {
       "Type": "AWS::S3::Bucket",
       "DeletionPolicy": "Retain",
-      "Metadata": {
+	   "Metadata": {
         "AWS::CloudFormation::Designer": {
           "id": "13a7f3a3-4e5c-499c-b62e-c520a5421517"
         }
